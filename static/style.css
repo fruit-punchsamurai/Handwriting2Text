@@ -1,45 +1,56 @@
 body {
   font-family: 'Arial', sans-serif;
   margin: 0;
-  padding: 20px;
+  padding: 10px;
   background-color: #1e1e2e;
   color: #e0e0e0;
 }
 
 .container {
   max-width: 800px;
+  width: 100%;
   margin: 0 auto;
   background: #2d2d3a;
-  padding: 30px;
+  padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  box-sizing: border-box;
 }
 
 h1 {
   text-align: center;
   color: #9f9fff;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
+  font-size: 1.8rem;
 }
 
 .upload-container {
   border: 2px dashed #444;
   border-radius: 8px;
-  padding: 20px;
+  padding: 15px;
   text-align: center;
 }
 
 .upload-box {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .file-label {
   display: inline-block;
-  padding: 12px 25px;
+  padding: 10px 20px;
   background: #4CAF50;
   color: white;
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.3s;
+  margin-bottom: 10px;
+  width: 100%;
+  max-width: 200px;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .file-label:hover {
@@ -47,14 +58,16 @@ h1 {
 }
 
 .process-btn, .action-btn {
-  padding: 12px 25px;
+  padding: 10px 20px;
   background: #2196F3;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin-left: 10px;
   transition: background 0.3s;
+  width: 100%;
+  max-width: 200px;
+  margin: 5px 0;
 }
 
 .process-btn:hover, .action-btn:hover {
@@ -62,14 +75,16 @@ h1 {
 }
 
 .deskew-btn {
-  padding: 12px 25px;
+  padding: 10px 20px;
   background: #ff9800;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin-left: 10px;
   transition: background 0.3s;
+  width: 100%;
+  max-width: 120px;
+  margin: 5px;
 }
 
 .deskew-btn:hover {
@@ -77,23 +92,24 @@ h1 {
 }
 
 .rotate-btn {
-  padding: 12px 15px;
+  padding: 10px;
   background: #673AB7;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  margin: 0 5px;
   transition: background 0.3s;
-  font-size: 18px;
+  font-size: 16px;
+  width: 40px;
+  height: 40px;
+  margin: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .rotate-btn:hover {
   background: #5e35b1;
-}
-
-.rotate-btn, .deskew-btn {
-  margin: 0 5px;
 }
 
 .download-btn {
@@ -108,16 +124,18 @@ h1 {
   transition: background 0.3s;
   position: relative;
   z-index: 5;
+  text-decoration: none;
 }
 
 .download-btn:hover {
   background: #45a049;
 }
 
-/* Modified preview-box to be a fixed container */
+/* Responsive preview box */
 .preview-box {
-  width: 400px;
-  height: 400px;
+  width: 100%;
+  max-width: 500px;
+  height: 500px;
   margin: 20px auto;
   position: relative;
   border: 2px dashed #444;
@@ -126,7 +144,6 @@ h1 {
   background: #383844;
 }
 
-/* Modified preview-image to center and rotate properly */
 .preview-image {
   max-width: 100%;
   max-height: 100%;
@@ -140,13 +157,14 @@ h1 {
 
 .result-box {
   margin-top: 20px;
-  padding: 20px;
+  padding: 15px;
   background: #383844;
   border-radius: 5px;
   min-height: 100px;
   justify-content: start;
   display: flex;
   flex-direction: column;
+  word-break: break-word;
 }
 
 .loading {
@@ -190,6 +208,7 @@ h1 {
   padding: 15px;
   border-radius: 5px;
   background-color: #383844;
+  overflow-x: auto;
 }
 
 .visualization-title {
@@ -233,6 +252,8 @@ h1 {
   position: relative;
   margin: 20px auto;
   display: inline-block;
+  max-width: 100%;
+  overflow: auto;
 }
 
 canvas {
@@ -242,7 +263,8 @@ canvas {
 .tab-container {
   display: flex;
   margin-bottom: 15px;
-  margin-top: 15px
+  margin-top: 15px;
+  flex-wrap: wrap;
 }
 
 .tab {
@@ -252,6 +274,9 @@ canvas {
   color: #aaa;
   cursor: pointer;
   border-bottom: 2px solid transparent;
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
 }
 
 .tab.active {
@@ -261,8 +286,72 @@ canvas {
 
 .tab-content {
   display: none;
+  width: 100%;
+  overflow-x: auto;
 }
 
 .tab-content.active {
   display: block;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 600px) {
+  .container {
+    padding: 15px;
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  .preview-box {
+    height: 350px;
+    max-width: 350px;
+  }
+  
+  .file-label, .process-btn, .action-btn, .deskew-btn {
+    padding: 8px 15px;
+    font-size: 14px;
+  }
+  
+  .rotate-btn {
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .tab {
+    padding: 8px 15px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 400px) {
+  .container {
+    padding: 10px;
+  }
+  
+  h1 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+  }
+  
+  .preview-box {
+    height: 200px;
+  }
+  
+  .visualization-title {
+    font-size: 16px;
+  }
+  
+  .result-box, .visualization-container {
+    padding: 10px;
+  }
+}
+
+/* Make original image responsive */
+#original-image-container img {
+  max-width: 100%;
+  height: auto;
 }
