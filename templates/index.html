@@ -16,13 +16,15 @@
                 </label>
                 <div class="action-buttons" style="display: none;" id="actionButtons">
                     <button id="deskewButton" class="deskew-btn" onclick="deskewImage()">Deskew</button>
-                    <button class="rotate-btn" onclick="rotateImage('counterclockwise')"><i class="fas fa-undo"></i></button>
-                    <button class="rotate-btn" onclick="rotateImage('clockwise')"><i class="fas fa-redo"></i></button>
+                    <button class="rotate-btn" onclick="rotateImage(-90)"><i class="fas fa-undo"></i></button>
+                    <button class="rotate-btn" onclick="rotateImage(90)"><i class="fas fa-redo"></i></button>
                 </div>
                 <button onclick="processImage()" class="process-btn">Process</button>
             </div>
             
-            <div id="preview" class="preview-box"></div>
+            <div id="preview" class="preview-box">
+                <!-- Image will be displayed here -->
+            </div>
             
             <div id="result" class="result-box"></div>
             
@@ -44,290 +46,324 @@
 
     <script>
         let deskewedImageBlob = null; // Store the deskewed image
-let currentImageBlob = null; // Current image being displayed
-let currentRotation = 0; // Track current rotation angle
-let boundingBoxes = null; // Store bounding boxes data
+        let currentImageBlob = null; // Current image being displayed
+        let currentRotation = 0; // Track current rotation angle
+        let boundingBoxes = null; // Store bounding boxes data
 
-document.getElementById('fileInput').addEventListener('change', function () {
-    const fileInput = document.getElementById('fileInput');
-    const previewDiv = document.getElementById('preview');
-    const actionButtons = document.getElementById('actionButtons');
-    const resultDiv = document.getElementById('result');
-    const visualizationDiv = document.getElementById('visualization');
+        document.getElementById('fileInput').addEventListener('change', function () {
+            const fileInput = document.getElementById('fileInput');
+            const previewDiv = document.getElementById('preview');
+            const actionButtons = document.getElementById('actionButtons');
+            const resultDiv = document.getElementById('result');
+            const visualizationDiv = document.getElementById('visualization');
 
-    if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        currentImageBlob = file;
-        deskewedImageBlob = null;
-        currentRotation = 0;
-        
-        displayImage(file, previewDiv);
-        actionButtons.style.display = 'block';
-        resultDiv.innerHTML = ''; // Clear previous results
-        visualizationDiv.style.display = 'none'; // Hide visualization
-        
-        // Reset any preview styling
-        previewDiv.style.minHeight = 'auto';
-    }
-});
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                currentImageBlob = file;
+                deskewedImageBlob = null;
+                currentRotation = 0;
+                
+                displayImage(file, previewDiv);
+                actionButtons.style.display = 'block';
+                resultDiv.innerHTML = ''; // Clear previous results
+                visualizationDiv.style.display = 'none'; // Hide visualization
+            }
+        });
 
-function displayImage(imageBlob, container) {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        container.innerHTML = `<img id="previewImage" src="${e.target.result}" class="preview-image">`;
-        // Reset any rotations
-        const img = document.getElementById('previewImage');
-        if (img) {
-            img.style.transform = `rotate(${currentRotation}deg)`;
+        function displayImage(imageBlob, container) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                container.innerHTML = `<img id="previewImage" src="${e.target.result}" class="preview-image">`;
+                // Reset rotation when displaying a new image
+                currentRotation = 0;
+                const img = document.getElementById('previewImage');
+                if (img) {
+                    img.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
+                }
+            };
+            reader.readAsDataURL(imageBlob);
         }
-    };
-    reader.readAsDataURL(imageBlob);
-}
 
-function deskewImage() {
-    if (!currentImageBlob) {
-        showError('Please select an image first');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', currentImageBlob);
-
-    fetch('/api/deskew', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.blob())
-    .then(blob => {
-        deskewedImageBlob = blob;
-        currentImageBlob = blob;
-        currentRotation = 0; // Reset rotation after deskew
-        
-        const previewDiv = document.getElementById('preview');
-        previewDiv.style.minHeight = 'auto';  // Reset height styling
-        
-        displayImage(blob, previewDiv);
-    })
-    .catch(error => {
-        showError('Error deskewing the image');
-    });
-}
-
-function rotateImage(direction) {
-    if (!currentImageBlob) {
-        showError('Please select an image first');
-        return;
-    }
-
-    // Update rotation angle
-    currentRotation += (direction === 'clockwise' ? 90 : -90);
-    
-    // Normalize to 0-359 range properly
-    currentRotation = ((currentRotation % 360) + 360) % 360;
-
-    const img = document.getElementById('previewImage');
-    if (img) {
-        img.style.transform = `rotate(${currentRotation}deg)`;
-        img.style.transition = 'transform 0.3s ease';
-        
-        // Adjust container styling based on rotation
-        const previewDiv = document.getElementById('preview');
-        if (currentRotation % 180 !== 0) {
-            // For 90° or 270° rotations, increase container height
-            previewDiv.style.minHeight = '500px';
-        } else {
-            // For 0° or 180° rotations, use auto height
-            previewDiv.style.minHeight = 'auto';
-        }
-    }
-}
-
-function processImage() {
-    const resultDiv = document.getElementById('result');
-
-    if (!currentImageBlob) {
-        showError('Please select an image first');
-        return;
-    }
-
-    // If image is rotated, need to apply rotation before sending
-    if (currentRotation !== 0) {
-        applyRotationAndProcess();
-    } else {
-        // Otherwise process normally
-        const formData = new FormData();
-        formData.append('file', currentImageBlob);
-        performOCR(formData);
-    }
-}
-
-function applyRotationAndProcess() {
-    const img = document.getElementById('previewImage');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Create image object to work with
-    const image = new Image();
-    image.onload = function() {
-        let width = image.width;
-        let height = image.height;
-        
-        // Set proper canvas dimensions based on rotation
-        if (currentRotation % 180 !== 0) {
-            // Swap dimensions for 90° or 270° rotations
-            canvas.width = height;
-            canvas.height = width;
-        } else {
-            canvas.width = width;
-            canvas.height = height;
-        }
-        
-        // Clear the canvas and apply transformations
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        
-        // Move to the center of the canvas
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        
-        // Rotate the canvas
-        ctx.rotate(currentRotation * Math.PI / 180);
-        
-        // Draw the image centered
-        ctx.drawImage(image, -width / 2, -height / 2, width, height);
-        
-        // Restore canvas state
-        ctx.restore();
-        
-        // Convert canvas to blob
-        canvas.toBlob(function(blob) {
-            // Update the current image blob with the rotated version
-            currentImageBlob = blob;
+        function rotateImage(degrees) {
+            if (!currentImageBlob) {
+                showError('Please select an image first');
+                return;
+            }
             
-            const formData = new FormData();
-            formData.append('file', blob, 'rotated.png');
-            performOCR(formData);
-        }, 'image/png');
-    };
-    image.src = img.src;
-}
-
-function performOCR(formData) {
-    const resultDiv = document.getElementById('result');
-    const visualizationDiv = document.getElementById('visualization');
-    
-    resultDiv.innerHTML = '<div class="loading">Processing...<div class="spinner"></div></div>';
-    visualizationDiv.style.display = 'none';
-
-    // First, get bounding boxes for visualization
-    fetch('/api/ocr', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Return-Boxes': 'true'
+            currentRotation += degrees;
+            const img = document.getElementById('previewImage');
+            img.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            showError(data.error);
-        } else {
-            // Display text result
-            let resultHTML = `<div class="success">${data.text.replace(/\n/g, '<br>')}</div>`;
-            resultHTML += `<a href="#" class="download-btn" onclick="downloadText('${encodeURIComponent(data.text)}')">
-                            <i class="fas fa-download"></i> Download Text</a>`;
-            resultDiv.innerHTML = resultHTML;
-            
-            // Store and display bounding boxes if available
-            if (data.boxes) {
-                boundingBoxes = data.boxes;
-                displayBoundingBoxes(data.boxes);
-                visualizationDiv.style.display = 'block';
+
+        function deskewImage() {
+            if (!currentImageBlob) {
+                showError('Please select an image first');
+                return;
+            }
+
+            // If image is rotated, need to apply rotation before sending
+            if (currentRotation !== 0) {
+                applyRotationAndDeskew();
+            } else {
+                // Otherwise process normally
+                const formData = new FormData();
+                formData.append('file', currentImageBlob);
+                sendDeskewRequest(formData);
             }
         }
-    })
-    .catch(error => {
-        showError('Error processing the image');
-    });
-}
 
-function displayBoundingBoxes(boxes) {
-    const container = document.getElementById('canvas-container');
-    const originalContainer = document.getElementById('original-image-container');
-    container.innerHTML = '';
-    originalContainer.innerHTML = '';
+        function applyRotationAndDeskew() {
+            const img = document.getElementById('previewImage');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Create image object to work with
+            const image = new Image();
+            image.onload = function() {
+                let width = image.width;
+                let height = image.height;
+                
+                // Set proper canvas dimensions based on rotation
+                if (currentRotation % 180 !== 0) {
+                    // Swap dimensions for 90° or 270° rotations
+                    canvas.width = height;
+                    canvas.height = width;
+                } else {
+                    canvas.width = width;
+                    canvas.height = height;
+                }
+                
+                // Clear the canvas and apply transformations
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                
+                // Move to the center of the canvas
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                
+                // Rotate the canvas
+                ctx.rotate(currentRotation * Math.PI / 180);
+                
+                // Draw the image centered
+                ctx.drawImage(image, -width / 2, -height / 2, width, height);
+                
+                // Restore canvas state
+                ctx.restore();
+                
+                // Convert canvas to blob
+                canvas.toBlob(function(blob) {
+                    const formData = new FormData();
+                    formData.append('file', blob, 'rotated.png');
+                    sendDeskewRequest(formData);
+                }, 'image/png');
+            };
+            image.src = img.src;
+        }
 
-    // Use the currentImageBlob that's now already rotated
-    const img = new Image();
-    img.onload = function() {
-        // Create canvas and set its dimensions
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        container.appendChild(canvas);
-        
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        
-        // Draw bounding boxes
-        boxes.forEach((group, groupIndex) => {
-            group.forEach((box, boxIndex) => {
-                const [x1, y1, x2, y2] = box;
+        function sendDeskewRequest(formData) {
+            fetch('/api/deskew', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                deskewedImageBlob = blob;
+                currentImageBlob = blob;
+                currentRotation = 0; // Reset rotation after deskew
                 
-                ctx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                const previewDiv = document.getElementById('preview');
+                displayImage(blob, previewDiv);
+            })
+            .catch(error => {
+                showError('Error deskewing the image');
+            });
+        }
+
+        function processImage() {
+            const resultDiv = document.getElementById('result');
+
+            if (!currentImageBlob) {
+                showError('Please select an image first');
+                return;
+            }
+
+            // If image is rotated, need to apply rotation before sending
+            if (currentRotation !== 0) {
+                applyRotationAndProcess();
+            } else {
+                // Otherwise process normally
+                const formData = new FormData();
+                formData.append('file', currentImageBlob);
+                performOCR(formData);
+            }
+        }
+
+        function applyRotationAndProcess() {
+            const img = document.getElementById('previewImage');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Create image object to work with
+            const image = new Image();
+            image.onload = function() {
+                let width = image.width;
+                let height = image.height;
                 
-                ctx.fillStyle = 'rgba(76, 175, 80, 0.8)';
-                ctx.fillRect(x1, y1 - 15, 20, 15);
+                // Set proper canvas dimensions based on rotation
+                if (currentRotation % 180 !== 0) {
+                    // Swap dimensions for 90° or 270° rotations
+                    canvas.width = height;
+                    canvas.height = width;
+                } else {
+                    canvas.width = width;
+                    canvas.height = height;
+                }
                 
-                ctx.fillStyle = 'white';
-                ctx.font = '10px Arial';
-                ctx.fillText(`${groupIndex+1}.${boxIndex+1}`, x1 + 2, y1 - 4);
+                // Clear the canvas and apply transformations
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                
+                // Move to the center of the canvas
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                
+                // Rotate the canvas
+                ctx.rotate(currentRotation * Math.PI / 180);
+                
+                // Draw the image centered
+                ctx.drawImage(image, -width / 2, -height / 2, width, height);
+                
+                // Restore canvas state
+                ctx.restore();
+                
+                // Convert canvas to blob
+                canvas.toBlob(function(blob) {
+                    // Update the current image blob with the rotated version
+                    currentImageBlob = blob;
+                    
+                    const formData = new FormData();
+                    formData.append('file', blob, 'rotated.png');
+                    performOCR(formData);
+                }, 'image/png');
+            };
+            image.src = img.src;
+        }
+
+        function performOCR(formData) {
+            const resultDiv = document.getElementById('result');
+            const visualizationDiv = document.getElementById('visualization');
+            
+            resultDiv.innerHTML = '<div class="loading">Processing...<div class="spinner"></div></div>';
+            visualizationDiv.style.display = 'none';
+
+            // First, get bounding boxes for visualization
+            fetch('/api/ocr', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Return-Boxes': 'true'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    // Display text result
+                    let resultHTML = `<div class="success">${data.text.replace(/\n/g, '<br>')}</div>`;
+                    resultHTML += `<a href="#" class="download-btn" onclick="downloadText('${encodeURIComponent(data.text)}')">
+                                    <i class="fas fa-download"></i> Download Text</a>`;
+                    resultDiv.innerHTML = resultHTML;
+                    
+                    // Store and display bounding boxes if available
+                    if (data.boxes) {
+                        boundingBoxes = data.boxes;
+                        displayBoundingBoxes(data.boxes);
+                        visualizationDiv.style.display = 'block';
+                    }
+                }
+            })
+            .catch(error => {
+                showError('Error processing the image');
+            });
+        }
+
+        function displayBoundingBoxes(boxes) {
+            const container = document.getElementById('canvas-container');
+            const originalContainer = document.getElementById('original-image-container');
+            container.innerHTML = '';
+            originalContainer.innerHTML = '';
+
+            // Use the currentImageBlob that's now already rotated
+            const img = new Image();
+            img.onload = function() {
+                // Create canvas and set its dimensions
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                container.appendChild(canvas);
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                // Draw bounding boxes
+                boxes.forEach((group, groupIndex) => {
+                    group.forEach((box, boxIndex) => {
+                        const [x1, y1, x2, y2] = box;
+                        
+                        ctx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                        
+                        ctx.fillStyle = 'rgba(76, 175, 80, 0.8)';
+                        ctx.fillRect(x1, y1 - 15, 20, 15);
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.font = '10px Arial';
+                        ctx.fillText(`${groupIndex+1}.${boxIndex+1}`, x1 + 2, y1 - 4);
+                    });
+                });
+                
+                // Clone image for original tab - now shows the processed image
+                const originalImg = img.cloneNode();
+                originalContainer.appendChild(originalImg);
+            };
+            
+            // Simply use the current image blob that was sent to the backend
+            img.src = URL.createObjectURL(currentImageBlob);
+        }
+
+        function downloadText(text) {
+            const decodedText = decodeURIComponent(text);
+            const blob = new Blob([decodedText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'recognized_text.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // Tab switching functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Show corresponding content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
             });
         });
-        
-        // Clone image for original tab - now shows the processed image
-        const originalImg = img.cloneNode();
-        originalContainer.appendChild(originalImg);
-    };
-    
-    // Simply use the current image blob that was sent to the backend
-    img.src = URL.createObjectURL(currentImageBlob);
-}
-
-function downloadText(text) {
-    const decodedText = decodeURIComponent(text);
-    const blob = new Blob([decodedText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'recognized_text.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-function showError(message) {
-    const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = `<div class="error">${message}</div>`;
-}
-
-// Tab switching functionality
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-        // Remove active class from all tabs and contents
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        
-        // Add active class to clicked tab
-        this.classList.add('active');
-        
-        // Show corresponding content
-        const tabId = this.getAttribute('data-tab');
-        document.getElementById(tabId).classList.add('active');
-    });
-});
     </script>
 </body>
 </html>

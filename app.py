@@ -9,6 +9,7 @@ from tensorflow.keras.layers.experimental.preprocessing import StringLookup
 from tensorflow import keras
 from ultralytics import YOLO
 import shutil
+import io
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
@@ -246,13 +247,25 @@ def deskew_image_api():
         file.save(input_path)
 
         deskewed_path = deskew_image(input_path, output_path)
-
-        return send_file(deskewed_path, mimetype='image/png')
+        
+        # Read the file into memory before cleaning up
+        with open(deskewed_path, 'rb') as f:
+            image_data = f.read()
+            
+        # Clean up the temporary directory
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        
+        # Return the file from memory instead of from disk
+        return send_file(
+            io.BytesIO(image_data),
+            mimetype='image/png',
+            as_attachment=False
+        )
 
     except Exception as e:
+        # Make sure we clean up on errors too
         shutil.rmtree(temp_dir, ignore_errors=True)
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/')
 def home():

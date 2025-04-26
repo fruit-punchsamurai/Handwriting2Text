@@ -114,22 +114,28 @@ h1 {
   background: #45a049;
 }
 
-
+/* Modified preview-box to be a fixed container */
 .preview-box {
-  margin: 20px 0;
-  overflow: visible;
-  min-height: 300px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  width: 400px;
+  height: 400px;
+  margin: 20px auto;
+  position: relative;
+  border: 2px dashed #444;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #383844;
 }
 
+/* Modified preview-image to center and rotate properly */
 .preview-image {
   max-width: 100%;
-  max-height: 300px;
-  border-radius: 5px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
-  transform-origin: center center;
+  max-height: 100%;
+  object-fit: contain;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transition: transform 0.3s ease;
 }
 
 .result-box {
