@@ -14,6 +14,10 @@ import io
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
 
+# Setup temp directory with proper permissions in user-writable location
+TEMP_DIR = os.path.join(os.getcwd(), 'temp')
+os.makedirs(TEMP_DIR, exist_ok=True)
+
 # Initialize models and character mapping
 print("Loading models...")
 yolo_model = YOLO('yolo_best60epoch.pt')
@@ -238,7 +242,7 @@ def deskew_image_api():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
-    temp_dir = os.path.join('temp', str(uuid.uuid4()))
+    temp_dir = os.path.join(TEMP_DIR, str(uuid.uuid4()))
     os.makedirs(temp_dir, exist_ok=True)
 
     try:
@@ -281,7 +285,7 @@ def process_image():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     
-    temp_dir = os.path.join('temp', str(uuid.uuid4()))
+    temp_dir = os.path.join(TEMP_DIR, str(uuid.uuid4()))
     os.makedirs(temp_dir, exist_ok=True)
     
     try:
@@ -308,7 +312,7 @@ def process_image():
                 boxes_list.append(group_boxes)
             response_data['boxes'] = boxes_list
         
-        shutil.rmtree(temp_dir)
+        shutil.rmtree(temp_dir, ignore_errors=True)
         return jsonify(response_data)
     
     except Exception as e:
@@ -316,6 +320,6 @@ def process_image():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    os.makedirs('temp', exist_ok=True)
-    port = int(os.environ.get("PORT", 5000))  # default to 5000 if not set
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # Use the port assigned by HuggingFace Spaces (7860)
+    port = int(os.environ.get("PORT", 7860))
+    app.run(host='0.0.0.0', port=port)
