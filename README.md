@@ -1,6 +1,7 @@
 # Handwriting2Text
 
-## 🚀 [Live Demo](https://huggingface.co/spaces/Nimehs/Handwriting2Text)
+[Click here to view the live site](https://huggingface.co/spaces/Nimehs/Handwriting2Text)
+
 
 
 A simple system that converts handwritten text into digital format using deep learning techniques. The project uses object detection and OCR models to identify and recognize handwritten words from an image, with an easy-to-use web interface.
