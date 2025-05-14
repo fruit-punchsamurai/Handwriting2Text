@@ -20,10 +20,10 @@ A simple system that converts handwritten text into digital format using deep le
 
 
 ### Screenshot 1
-![Menu](images/sc1.png)
+![Screenshot 1](images/sc1.png)
 
-### Game Screenshot 2
-![Game 1](images/sc2.png)
+### Screenshot 2
+![Screenshot 2](images/sc2.png)
 
-### Game Screenshot 3
-![Game 2](images/sc3.png)
+### Screenshot 3
+![Screenshot 3](images/sc3.png)
